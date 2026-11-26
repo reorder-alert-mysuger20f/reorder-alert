@@ -79,6 +79,7 @@ textarea{width:100%;height:80px}
   <textarea id="paste"></textarea>
   <div class="row"><button id="doPaste">استيراد</button><button class="sec" id="exp">تصدير CSV</button><button class="sec" id="clr">مسح كل الأصناف</button></div>
 </div>
+<div class="card"><div class="row"><div style="flex:1;min-width:200px"><label>🔍 بحث عن صنف</label><input id="q" type="search" placeholder="اكتب جزء من اسم الصنف" style="width:100%" autocomplete="off"></div><small id="qc"></small></div></div>
 <div class="card tw">
 <table>
 <thead><tr><th>الصنف</th><th>الرصيد</th><th>خطة الشهر</th><th>مدة التوريد</th><th>الاستهلاك اليومي</th><th>يكفي (يوم)</th><th>% من الخطة</th><th>الحالة</th><th>آخر تعديل</th><th></th></tr></thead>
@@ -112,10 +113,13 @@ function calc(it){
   return{daily,cover,pct,k};
 }
 const fmt=ts=>{try{return new Date(ts).toLocaleString('ar-EG',{timeZone:'Africa/Cairo',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(e){return ts}};
+const norm=s=>String(s||'').toLowerCase().replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
 function render(){
   $('thr').value=D.settings.thr;$('safe').value=D.settings.safe;$('days').value=D.settings.days;
-  const rows=D.items.map(it=>({it,c:calc(it)})).sort((a,b)=>ST[a.c.k][2]-ST[b.c.k][2]||a.it.name.localeCompare(b.it.name));
-  const cnt={danger:0,buy:0,warn:0,ok:0};rows.forEach(r=>cnt[r.c.k]++);
+  const qv=norm($('q').value);const all=D.items.length;
+  const rows=D.items.filter(it=>!qv||qv.split(' ').every(w=>norm(it.name).includes(w))).map(it=>({it,c:calc(it)})).sort((a,b)=>ST[a.c.k][2]-ST[b.c.k][2]||a.it.name.localeCompare(b.it.name));
+  const cnt={danger:0,buy:0,warn:0,ok:0};D.items.forEach(it=>cnt[calc(it).k]++);
+  $('qc').textContent=qv?rows.length+' من '+all:all+' صنف';
   $('sum').innerHTML=Object.keys(ST).map(k=>`<div class="pill ${ST[k][1]}"><b>${cnt[k]}</b>${ST[k][0]}</div>`).join('');
   $('tb').innerHTML=rows.map(({it,c})=>`<tr>
    <td><input class="nm" value="${esc(it.name)}" data-id="${it.id}" data-f="name"></td>
@@ -146,6 +150,7 @@ async function act(fn,args){
   finally{busy--;}
   await refresh();
 }
+$('q').addEventListener('input',render);
 $('tb').addEventListener('change',e=>{const t=e.target;if(!t.dataset.id)return;
   act('ro_set_field',{p_id:t.dataset.id,p_field:t.dataset.f,p_value:t.value});});
 $('tb').addEventListener('focusout',()=>setTimeout(()=>{if(dirty&&!focused()){render();dirty=false}},200));
