@@ -23,9 +23,9 @@ button{background:#1f4e79;color:#fff;border:0;cursor:pointer}
 button.sec{background:#e3e8ef;color:#1b2430}
 button.del{background:#c0392b;padding:4px 8px}
 .sum{display:flex;gap:8px;flex-wrap:wrap}
-.pill{flex:1;min-width:110px;text-align:center;padding:10px;border-radius:10px;color:#fff;font-weight:700}
+.pill{flex:1;min-width:95px;text-align:center;padding:10px;border-radius:10px;color:#fff;font-weight:700}
 .pill b{display:block;font-size:24px}
-.s-danger{background:#c0392b}.s-buy{background:#e67e22}.s-warn{background:#d4a017}.s-ok{background:#2e8b57}
+.s-na{background:#7f8c8d}.s-na2{background:#95a5a6}.s-danger{background:#c0392b}.s-buy{background:#e67e22}.s-warn{background:#d4a017}.s-ok{background:#2e8b57}
 .tw{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:14px;min-width:820px}
 th,td{padding:6px 8px;border-bottom:1px solid #e2e6ec;text-align:center}
@@ -95,7 +95,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 let ME={name:localStorage.getItem('ro_name')||'',code:localStorage.getItem('ro_code')||''};
 let TEAM='',D={items:[],settings:{thr:30,safe:3,days:30},log:[]},dirty=false,busy=0,timer=null;
-const ST={danger:['خطر','s-danger',0],buy:['مرحلة الشراء','s-buy',1],warn:['تحذير','s-warn',2],ok:['آمن','s-ok',3]};
+const ST={danger:['خطر','s-danger',0],buy:['مرحلة الشراء','s-buy',1],warn:['تحذير','s-warn',2],ok:['آمن','s-ok',3],nostock:['بدون رصيد مسجل','s-na',4],noplan:['بدون خطة للشهر','s-na2',5]};
 async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('reorder-alert:'+s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function rpc(fn,args){
   const r=await fetch(SB+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
@@ -105,7 +105,8 @@ async function rpc(fn,args){
 function calc(it){
   const S=D.settings,daily=S.days>0?it.plan/S.days:0,cover=daily>0?it.stock/daily:Infinity,pct=it.plan>0?it.stock/it.plan*100:100,lead=it.lead||0;
   let k='ok';
-  if(it.plan>0&&daily>0){
+  if(it.flag==='nostock'||it.flag==='noplan')k=it.flag;
+  else if(it.plan>0&&daily>0){
     if(cover<lead)k='danger';
     else if(pct<=S.thr||cover<=lead+S.safe)k='buy';
     else if(cover<=lead+2*S.safe)k='warn';
@@ -118,7 +119,7 @@ function render(){
   $('thr').value=D.settings.thr;$('safe').value=D.settings.safe;$('days').value=D.settings.days;
   const qv=norm($('q').value);const all=D.items.length;
   const rows=D.items.filter(it=>!qv||qv.split(' ').every(w=>norm(it.name).includes(w))).map(it=>({it,c:calc(it)})).sort((a,b)=>ST[a.c.k][2]-ST[b.c.k][2]||a.it.name.localeCompare(b.it.name));
-  const cnt={danger:0,buy:0,warn:0,ok:0};D.items.forEach(it=>cnt[calc(it).k]++);
+  const cnt={danger:0,buy:0,warn:0,ok:0,nostock:0,noplan:0};D.items.forEach(it=>cnt[calc(it).k]++);
   $('qc').textContent=qv?rows.length+' من '+all:all+' صنف';
   $('sum').innerHTML=Object.keys(ST).map(k=>`<div class="pill ${ST[k][1]}"><b>${cnt[k]}</b>${ST[k][0]}</div>`).join('');
   $('tb').innerHTML=rows.map(({it,c})=>`<tr>
