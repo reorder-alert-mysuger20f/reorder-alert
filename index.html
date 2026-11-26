@@ -9,14 +9,16 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,"Segoe UI",Tahoma,Arial,sans-serif;background:#f3f5f8;color:#1b2430}
-header{background:#1f4e79;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:5}
+header{background:#1f4e79;color:#fff;padding:10px 16px;position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 header h1{margin:0;font-size:18px}
+#me{font-size:13px;display:flex;gap:8px;align-items:center}
+#dot{width:10px;height:10px;border-radius:50%;background:#aaa;display:inline-block}
 main{padding:12px;max-width:1100px;margin:auto}
 .card{background:#fff;border-radius:10px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px #0002}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
 label{font-size:12px;color:#555;display:block;margin-bottom:2px}
 input,select,textarea,button{font:inherit;padding:8px;border:1px solid #bbc;border-radius:8px}
-input{width:110px}input.wide{width:190px}
+input{width:110px}input.wide{width:200px}
 button{background:#1f4e79;color:#fff;border:0;cursor:pointer}
 button.sec{background:#e3e8ef;color:#1b2430}
 button.del{background:#c0392b;padding:4px 8px}
@@ -25,32 +27,43 @@ button.del{background:#c0392b;padding:4px 8px}
 .pill b{display:block;font-size:24px}
 .s-danger{background:#c0392b}.s-buy{background:#e67e22}.s-warn{background:#d4a017}.s-ok{background:#2e8b57}
 .tw{overflow-x:auto}
-table{border-collapse:collapse;width:100%;font-size:14px;min-width:760px}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:820px}
 th,td{padding:6px 8px;border-bottom:1px solid #e2e6ec;text-align:center}
-th{background:#eef2f7;position:sticky;top:0}
-td.name{text-align:right}
+th{background:#eef2f7}
 td input{width:80px;padding:4px}
 td input.nm{width:150px}
 .tag{padding:3px 10px;border-radius:12px;color:#fff;font-size:13px;white-space:nowrap}
 small{color:#667}
-textarea{width:100%;height:90px}
+textarea{width:100%;height:80px}
+#log{max-height:260px;overflow:auto;font-size:13px}
+#log div{padding:5px 0;border-bottom:1px solid #eef}
+#login{max-width:420px;margin:40px auto}
+#login input{width:100%;margin-bottom:10px}
+.hide{display:none}
+#err{color:#c0392b;font-size:13px}
 </style>
 </head>
 <body>
-<header><h1>🔔 نظام تنبيه إعادة الطلب</h1></header>
+<header><h1>🔔 نظام تنبيه إعادة الطلب</h1>
+<div id="me" class="hide"><span id="dot"></span><span id="who"></span><button class="sec" id="logout">تغيير الاسم / الفريق</button></div></header>
 <main>
+<div id="login" class="card hide">
+  <b>الدخول للفريق</b><br><small>اكتب اسمك (يظهر في سجل التعديلات) وكود الفريق. كل من يكتب نفس الكود يشوف نفس البيانات ويعدل عليها. كود جديد = فريق جديد فاضي. اختار كود صعب (8 حروف أو أكتر) ولا تشاركه إلا مع فريقك.</small><br><br>
+  <label>اسمك</label><input id="l_name" maxlength="40" autocomplete="name">
+  <label>كود الفريق</label><input id="l_code" type="password" autocomplete="off">
+  <button id="l_go">دخول</button> <div id="err"></div>
+</div>
+<div id="app" class="hide">
 <div class="card">
   <div class="row">
-    <div><label>حد النقص % من خطة الشهر</label><input id="thr" type="number" value="30" min="0" max="100"></div>
-    <div><label>هامش أمان (أيام)</label><input id="safe" type="number" value="3" min="0"></div>
-    <div><label>أيام الشهر</label><input id="days" type="number" value="30" min="1"></div>
+    <div><label>حد النقص % من خطة الشهر</label><input id="thr" type="number" min="0" max="100"></div>
+    <div><label>هامش أمان (أيام)</label><input id="safe" type="number" min="0"></div>
+    <div><label>أيام الشهر</label><input id="days" type="number" min="1"></div>
     <button id="notif" class="sec">تفعيل الإشعارات</button>
   </div>
-  <small>الخطر = الرصيد يكفي أيام أقل من مدة التوريد. مرحلة الشراء = وصل لحد النقص % أو الرصيد يكفي أقل من (مدة التوريد + هامش الأمان). تحذير = قرّب منها.</small>
+  <small>الخطر = الرصيد يكفي أيام أقل من مدة التوريد. مرحلة الشراء = وصل لحد النقص % أو الرصيد يكفي أقل من (مدة التوريد + هامش الأمان). تحذير = قرّب منها. الإعدادات والبيانات مشتركة مع كل الفريق وتتحدث تلقائياً.</small>
 </div>
-
 <div class="card sum" id="sum"></div>
-
 <div class="card">
   <b>إضافة صنف</b>
   <div class="row">
@@ -61,35 +74,35 @@ textarea{width:100%;height:90px}
     <button id="add">إضافة</button>
   </div>
 </div>
-
 <div class="card">
-  <b>لصق من Excel</b> <small>(4 أعمدة بالترتيب: الصنف، الرصيد، خطة الشهر، مدة التوريد. انسخ من Excel والصق هنا)</small>
-  <textarea id="paste" placeholder="صنف أ	500	1500	8"></textarea>
-  <div class="row">
-    <button id="doPaste">استيراد</button>
-    <button class="sec" id="exp">تصدير CSV</button>
-    <button class="sec" id="clr">مسح الكل</button>
-  </div>
+  <b>لصق من Excel</b> <small>(4 أعمدة: الصنف، الرصيد، خطة الشهر، مدة التوريد. الصنف الموجود بنفس الاسم يتحدث)</small>
+  <textarea id="paste"></textarea>
+  <div class="row"><button id="doPaste">استيراد</button><button class="sec" id="exp">تصدير CSV</button><button class="sec" id="clr">مسح كل الأصناف</button></div>
 </div>
-
 <div class="card tw">
 <table>
-<thead><tr><th>الصنف</th><th>الرصيد</th><th>خطة الشهر</th><th>مدة التوريد</th><th>الاستهلاك اليومي</th><th>يكفي (يوم)</th><th>% من الخطة</th><th>الحالة</th><th></th></tr></thead>
+<thead><tr><th>الصنف</th><th>الرصيد</th><th>خطة الشهر</th><th>مدة التوريد</th><th>الاستهلاك اليومي</th><th>يكفي (يوم)</th><th>% من الخطة</th><th>الحالة</th><th>آخر تعديل</th><th></th></tr></thead>
 <tbody id="tb"></tbody>
 </table>
 </div>
-<small>البيانات محفوظة على جهازك فقط (داخل المتصفح). لا يتم إرسالها لأي مكان.</small>
+<div class="card"><b>سجل التعديلات</b><div id="log"></div></div>
+</div>
 </main>
 <script>
+const SB='https://xspsgklwipkfchgehcut.supabase.co', KEY='sb_publishable_mX0eL1QYPsQnnrZuRrQPsA_3IjTiymP';
 const $=id=>document.getElementById(id);
-let S=JSON.parse(localStorage.getItem('ro_state')||'null')||{thr:30,safe:3,days:30,items:[]};
-const save=()=>localStorage.setItem('ro_state',JSON.stringify(S));
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+let ME={name:localStorage.getItem('ro_name')||'',code:localStorage.getItem('ro_code')||''};
+let TEAM='',D={items:[],settings:{thr:30,safe:3,days:30},log:[]},dirty=false,busy=0,timer=null;
 const ST={danger:['خطر','s-danger',0],buy:['مرحلة الشراء','s-buy',1],warn:['تحذير','s-warn',2],ok:['آمن','s-ok',3]};
+async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('reorder-alert:'+s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+async function rpc(fn,args){
+  const r=await fetch(SB+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
+  if(!r.ok)throw new Error(fn+' '+r.status);
+  const t=await r.text();return t?JSON.parse(t):null;
+}
 function calc(it){
-  const daily=S.days>0?it.plan/S.days:0;
-  const cover=daily>0?it.stock/daily:Infinity;
-  const pct=it.plan>0?it.stock/it.plan*100:100;
-  const lead=it.lead||0;
+  const S=D.settings,daily=S.days>0?it.plan/S.days:0,cover=daily>0?it.stock/daily:Infinity,pct=it.plan>0?it.stock/it.plan*100:100,lead=it.lead||0;
   let k='ok';
   if(it.plan>0&&daily>0){
     if(cover<lead)k='danger';
@@ -98,72 +111,94 @@ function calc(it){
   }
   return{daily,cover,pct,k};
 }
+const fmt=ts=>{try{return new Date(ts).toLocaleString('ar-EG',{timeZone:'Africa/Cairo',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(e){return ts}};
 function render(){
-  $('thr').value=S.thr;$('safe').value=S.safe;$('days').value=S.days;
-  const rows=S.items.map((it,i)=>({it,i,c:calc(it)})).sort((a,b)=>ST[a.c.k][2]-ST[b.c.k][2]);
+  $('thr').value=D.settings.thr;$('safe').value=D.settings.safe;$('days').value=D.settings.days;
+  const rows=D.items.map(it=>({it,c:calc(it)})).sort((a,b)=>ST[a.c.k][2]-ST[b.c.k][2]||a.it.name.localeCompare(b.it.name));
   const cnt={danger:0,buy:0,warn:0,ok:0};rows.forEach(r=>cnt[r.c.k]++);
   $('sum').innerHTML=Object.keys(ST).map(k=>`<div class="pill ${ST[k][1]}"><b>${cnt[k]}</b>${ST[k][0]}</div>`).join('');
-  $('tb').innerHTML=rows.map(({it,i,c})=>`<tr>
-   <td class="name"><input class="nm" value="${esc(it.name)}" data-i="${i}" data-f="name"></td>
-   <td><input type="number" value="${it.stock}" data-i="${i}" data-f="stock"></td>
-   <td><input type="number" value="${it.plan}" data-i="${i}" data-f="plan"></td>
-   <td><input type="number" value="${it.lead}" data-i="${i}" data-f="lead" style="background:#fff8c4"></td>
-   <td>${c.daily.toFixed(1)}</td>
-   <td>${isFinite(c.cover)?c.cover.toFixed(1):'-'}</td>
-   <td>${c.pct.toFixed(0)}%</td>
+  $('tb').innerHTML=rows.map(({it,c})=>`<tr>
+   <td><input class="nm" value="${esc(it.name)}" data-id="${it.id}" data-f="name"></td>
+   <td><input type="number" value="${it.stock}" data-id="${it.id}" data-f="stock"></td>
+   <td><input type="number" value="${it.plan}" data-id="${it.id}" data-f="plan"></td>
+   <td><input type="number" value="${it.lead}" data-id="${it.id}" data-f="lead" style="background:#fff8c4"></td>
+   <td>${c.daily.toFixed(1)}</td><td>${isFinite(c.cover)?c.cover.toFixed(1):'-'}</td><td>${c.pct.toFixed(0)}%</td>
    <td><span class="tag ${ST[c.k][1]}">${ST[c.k][0]}</span></td>
-   <td><button class="del" data-del="${i}">✕</button></td></tr>`).join('');
+   <td><small>${esc(it.updated_by||'')}<br>${esc(fmt(it.updated_at))}</small></td>
+   <td><button class="del" data-del="${it.id}">✕</button></td></tr>`).join('');
+  const AC={add:'أضاف',edit:'عدّل',delete:'حذف',clear:'مسح',setting:'غيّر إعداد',import:'استورد'};
+  $('log').innerHTML=D.log.map(l=>`<div><b>${esc(l.who)}</b> ${AC[l.action]||esc(l.action)} ${l.item?'«'+esc(l.item)+'»':''} <small>${esc(l.detail||'')}</small> <small>· ${esc(fmt(l.ts))}</small></div>`).join('')||'<small>لا توجد تعديلات بعد</small>';
 }
-function esc(s){return String(s).replace(/"/g,'&quot;').replace(/</g,'&lt;')}
-$('tb').addEventListener('change',e=>{
-  const t=e.target,i=t.dataset.i;if(i==null)return;
-  S.items[i][t.dataset.f]=t.dataset.f==='name'?t.value:(parseFloat(t.value)||0);save();render();alertCheck(false);
-});
-$('tb').addEventListener('click',e=>{const d=e.target.dataset.del;if(d!=null){S.items.splice(d,1);save();render();}});
-['thr','safe','days'].forEach(id=>$(id).addEventListener('change',()=>{S[id]=parseFloat($(id).value)||0;save();render();alertCheck(false);}));
-$('add').onclick=()=>{
-  const n=$('n_name').value.trim();if(!n)return;
-  S.items.push({name:n,stock:+$('n_stock').value||0,plan:+$('n_plan').value||0,lead:+$('n_lead').value||0});
-  ['n_name','n_stock','n_plan','n_lead'].forEach(x=>$(x).value='');save();render();alertCheck(false);
+function focused(){const a=document.activeElement;return a&&a.closest&&a.closest('#tb')}
+async function refresh(){
+  if(busy)return;
+  try{
+    const d=await rpc('ro_get',{p_team:TEAM});
+    D=d;$('dot').style.background='#2ecc71';$('dot').title='متصل';
+    if(focused()){dirty=true}else{render();dirty=false}
+    alertCheck();
+  }catch(e){$('dot').style.background='#e74c3c';$('dot').title='غير متصل'}
+}
+async function act(fn,args){
+  busy++;
+  try{await rpc(fn,Object.assign({p_team:TEAM,p_who:ME.name},args));}
+  catch(e){alert('تعذر الحفظ. تأكد من الاتصال بالإنترنت.');}
+  finally{busy--;}
+  await refresh();
+}
+$('tb').addEventListener('change',e=>{const t=e.target;if(!t.dataset.id)return;
+  act('ro_set_field',{p_id:t.dataset.id,p_field:t.dataset.f,p_value:t.value});});
+$('tb').addEventListener('focusout',()=>setTimeout(()=>{if(dirty&&!focused()){render();dirty=false}},200));
+$('tb').addEventListener('click',e=>{const d=e.target.dataset.del;if(d&&confirm('حذف الصنف؟'))act('ro_delete',{p_id:d});});
+[['thr'],['safe'],['days']].forEach(([id])=>$(id).addEventListener('change',()=>act('ro_set_setting',{p_field:id,p_value:parseFloat($(id).value)||0})));
+$('add').onclick=async()=>{const n=$('n_name').value.trim();if(!n)return;
+  await act('ro_add',{p_name:n,p_stock:+$('n_stock').value||0,p_plan:+$('n_plan').value||0,p_lead:+$('n_lead').value||0});
+  ['n_name','n_stock','n_plan','n_lead'].forEach(x=>$(x).value='');};
+$('doPaste').onclick=async()=>{
+  const items=[];
+  $('paste').value.split(/\r?\n/).forEach(l=>{const p=l.split(/\t|,|;/).map(x=>x.trim());if(p.length<3)return;const stock=parseFloat(p[1]);if(isNaN(stock))return;
+    const o={name:p[0],stock,plan:parseFloat(p[2])||0};if(p[3]!==undefined&&p[3]!==''&&!isNaN(parseFloat(p[3])))o.lead=parseFloat(p[3]);items.push(o)});
+  if(!items.length){alert('لا توجد صفوف صالحة');return}
+  await act('ro_import',{p_items:items});$('paste').value='';alert('تم استيراد '+items.length+' صنف');
 };
-$('doPaste').onclick=()=>{
-  const lines=$('paste').value.split(/\r?\n/).filter(l=>l.trim());
-  let n=0;
-  lines.forEach(l=>{
-    const p=l.split(/\t|,|;/).map(x=>x.trim());
-    if(p.length<3)return;
-    const stock=parseFloat(p[1]);if(isNaN(stock))return; // skip header
-    const ex=S.items.find(x=>x.name===p[0]);
-    const v={name:p[0],stock,plan:parseFloat(p[2])||0,lead:parseFloat(p[3])||(ex?ex.lead:0)};
-    if(ex)Object.assign(ex,v);else S.items.push(v);n++;
-  });
-  $('paste').value='';save();render();alertCheck(false);alert('تم استيراد '+n+' صنف');
-};
+$('clr').onclick=()=>{if(confirm('مسح كل أصناف الفريق؟ هذا يؤثر على الجميع.'))act('ro_clear',{});};
 $('exp').onclick=()=>{
-  const csv='\ufeffالصنف,الرصيد,خطة الشهر,مدة التوريد,يكفي (يوم),الحالة\n'+S.items.map(it=>{const c=calc(it);return [it.name,it.stock,it.plan,it.lead,isFinite(c.cover)?c.cover.toFixed(1):'',ST[c.k][0]].join(',')}).join('\n');
+  const csv='\ufeffالصنف,الرصيد,خطة الشهر,مدة التوريد,يكفي (يوم),الحالة\n'+D.items.map(it=>{const c=calc(it);return ['"'+it.name.replace(/"/g,'""')+'"',it.stock,it.plan,it.lead,isFinite(c.cover)?c.cover.toFixed(1):'',ST[c.k][0]].join(',')}).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='reorder.csv';a.click();
 };
-$('clr').onclick=()=>{if(confirm('مسح كل الأصناف؟')){S.items=[];save();render();}};
 $('notif').onclick=async()=>{
   if(!('Notification' in window)){alert('المتصفح لا يدعم الإشعارات');return;}
   const p=await Notification.requestPermission();
-  alert(p==='granted'?'تم تفعيل الإشعارات. ستصلك عند فتح التطبيق إذا وُجد صنف في خطر أو مرحلة شراء.':'لم يتم السماح بالإشعارات');
-  alertCheck(true);
+  alert(p==='granted'?'تم تفعيل الإشعارات. ستصلك عند فتح التطبيق وأثناء بقائه مفتوحاً.':'لم يتم السماح بالإشعارات');alertCheck(true);
 };
 function alertCheck(force){
-  const bad=S.items.map(it=>({it,c:calc(it)})).filter(x=>x.c.k==='danger'||x.c.k==='buy');
+  const bad=D.items.map(it=>({it,c:calc(it)})).filter(x=>x.c.k==='danger'||x.c.k==='buy');
   if(!bad.length||!('Notification' in window)||Notification.permission!=='granted')return;
   const key=new Date().toDateString()+bad.map(b=>b.it.name+b.c.k).join('|');
   if(!force&&localStorage.getItem('ro_last')===key)return;
   localStorage.setItem('ro_last',key);
   const d=bad.filter(b=>b.c.k==='danger').length;
-  const body=bad.slice(0,5).map(b=>b.it.name+' ('+ST[b.c.k][0]+')').join('، ');
-  const opt={body:`${d} في خطر، ${bad.length-d} مرحلة شراء: ${body}`,icon:'icon.svg',dir:'rtl'};
+  const opt={body:`${d} في خطر، ${bad.length-d} مرحلة شراء: `+bad.slice(0,5).map(b=>b.it.name+' ('+ST[b.c.k][0]+')').join('، '),icon:'icon.svg',dir:'rtl'};
   if(navigator.serviceWorker&&navigator.serviceWorker.ready)navigator.serviceWorker.ready.then(r=>r.showNotification('تنبيه إعادة الطلب',opt)).catch(()=>new Notification('تنبيه إعادة الطلب',opt));
   else new Notification('تنبيه إعادة الطلب',opt);
 }
+async function enter(){
+  TEAM=await sha(ME.code);
+  $('login').classList.add('hide');$('app').classList.remove('hide');$('me').classList.remove('hide');
+  $('who').textContent=ME.name;
+  await refresh();
+  clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)refresh()},4000);
+}
+$('l_go').onclick=()=>{
+  const n=$('l_name').value.trim(),c=$('l_code').value;
+  if(!n){$('err').textContent='اكتب اسمك';return}
+  if(c.length<8){$('err').textContent='الكود لازم 8 حروف أو أكتر';return}
+  ME={name:n,code:c};localStorage.setItem('ro_name',n);localStorage.setItem('ro_code',c);$('err').textContent='';enter();
+};
+$('logout').onclick=()=>{localStorage.removeItem('ro_code');clearInterval(timer);$('app').classList.add('hide');$('me').classList.add('hide');$('login').classList.remove('hide');$('l_name').value=ME.name;$('l_code').value='';};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TEAM)refresh()});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
-render();alertCheck(false);
+if(ME.name&&ME.code.length>=8)enter();else $('login').classList.remove('hide');
 </script>
 </body>
 </html>
